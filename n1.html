@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: 'Times New Roman', serif; background: linear-gradient(to right, #4facfe, #00f2fe); margin: 0; padding: 0; color: #333; }
+    header { background-color: #007BFF; color: white; padding: 20px; text-align: center; font-size: 22px; font-weight: bold; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+    main { max-width: 900px; margin: 30px auto; padding: 20px; background: #fff; border-radius: 12px; box-shadow: 0 6px 15px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #007BFF; margin-bottom: 20px; }
+    .mensagem { margin-top: 18px; text-align: center; font-size: 17px; font-weight: bold; color: #dc3545; }
+    .btn-baixar { display: block; margin: 40px auto; padding: 15px 25px; font-size: 18px; color: #fff; background: #28a745; border: none; border-radius: 8px; cursor: pointer; }
+    .btn-baixar:hover { background: #218838; }
+  </style>
+</head>
+<body>
+  <header>Plano automatico</header>
+  <main>
+    <h2>Seu plano está pronto</h2>
+    <button class="btn-baixar" id="btnBaixar">📥 Baixar PDF</button>
+    <div id="mensagem" class="mensagem"></div>
+  </main>
+
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const planoDataJSON = sessionStorage.getItem("planoData");
+      if (!planoDataJSON) {
+        document.getElementById('mensagem').innerText = "❌ Nenhum plano encontrado para baixar.";
+        document.getElementById('btnBaixar').disabled = true;
+        return;
+      }
+      const planoData = JSON.parse(planoDataJSON);
+
+      document.getElementById('btnBaixar').addEventListener('click', () => {
+        gerarEbaixarPDF(planoData);
+      });
+    });
+    // Função para quebrar texto a cada N caracteres (padrão 6)
+    function quebraLinha(texto, tamanho = 70) {
+      let resultado = '';
+      for (let i = 0; i < texto.length; i += tamanho) {
+        resultado += texto.substr(i, tamanho) + '\n';
+      }
+      return resultado.trim();
+    }
+
+    function gerarEbaixarPDF(planoData) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(12);
+      const pageWidth = doc.internal.pageSize.getWidth();
+      doc.text("PLANO DE AULA", pageWidth / 2, 12, { align: "center" });
+
+      // Criar container temporário para interpretar o HTML salvo
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = planoData.html;
+
+      // Imprimir dados à esquerda
+      let yLeft = 25;
+      const addLineLeft = (label, value) => {
+        if (value) {
+          doc.text(`${label}:`, 10, yLeft);
+          doc.text(value, 55, yLeft);
+          yLeft += 6;
+        }
+      };
+      const dadosEsquerda = tempDiv.querySelector('#dadosEsquerda');
+        if (dadosEsquerda) {
+          dadosEsquerda.innerText.split('\n').forEach(line => {
+            if (line.includes(':')) {
+              const [label, value] = line.split(':', 2);
+              if (label.trim().toLowerCase() === "tema") {
+                const textoQuebrado = quebraLinha(value.trim(), 70);
+                doc.text(`${label.trim()}:`, 10, yLeft);
+                doc.text(textoQuebrado, 25, yLeft);
+                yLeft += (textoQuebrado.split('\n').length * 6);
+              } else {
+                addLineLeft(label.trim(), value.trim());
+              }
+            }
+          });
+        }
+
+      // Imprimir dados à direita
+      let yRight = 25;
+      const addLineRight = (label, value) => {
+        if (value) {
+          doc.text(`${label}:`, 160, yRight);
+          doc.text(value, 200, yRight);
+          yRight += 6;
+        }
+      };
+      const dadosDireita = tempDiv.querySelector('#dadosDireita');
+      if (dadosDireita) {
+        dadosDireita.innerText.split('\n').forEach(line => {
+          if (line.includes(':')) {
+            const [label, value] = line.split(':', 2);
+            addLineRight(label.trim(), value.trim());
+          }
+        });
+      }
+
+      let lastY = Math.max(yLeft, yRight);
+
+      // Objetivos
+      const listaObjetivos = tempDiv.querySelector('#listaObjetivos');
+      if (listaObjetivos) {
+        const objetivos = Array.from(listaObjetivos.querySelectorAll('li'))
+          .map(li => li.innerText.trim())
+          .filter(txt => txt);
+
+        const alturaLinha = 6;
+        const alturaTitulo = 7;
+        const alturaTotal = alturaTitulo + objetivos.length * alturaLinha;
+
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        // Se não houver espaço suficiente na página atual, adiciona nova página
+        if (lastY + alturaTotal > pageHeight - 20) {
+          doc.addPage();
+          lastY = 15;
+        }
+
+        doc.text("Objetivos Específicos:", 10, lastY + 5);
+        let yObj = lastY + 12;
+
+        objetivos.forEach(txt => {
+          doc.text(txt, 15, yObj);
+          yObj += alturaLinha;
+        });
+
+        lastY = yObj + 30;
+      }
+
+      // Tabela do plano
+      const tabela = tempDiv.querySelector('#tabelaPlano');
+      if (tabela) {
+        const rows = tabela.querySelectorAll('tbody tr');
+        const tableBody = Array.from(rows).map(row => {
+          return Array.from(row.querySelectorAll('td')).map(cell => {
+            let text = cell.innerHTML
+              .replace(/<br\s*\/?>/gi, '\n')
+              .replace(/<[^>]*>/g, '');
+            return text.trim();
+          });
+        });
+
+        doc.autoTable({
+          startY: lastY + 3,
+          head: [['TEMPO','FUNÇÕES DIDÁCTICAS','CONTEÚDOS','ACTIVIDADES DO PROFESSOR','ACTIVIDADES DOS ALUNOS','MÉTODOS DE ENSINO','MEIOS DE ENSINO']],
+          body: tableBody,
+          theme: 'grid',
+          showHead: 'firstPage',  // cabeçalho somente na primeira página
+          styles: {
+            font: 'times',
+            fontSize: 12,
+            overflow: 'linebreak',
+            cellPadding: 3,
+            lineColor: [0, 0, 0],
+            textColor: [0, 0, 0]
+          },
+          headStyles: {
+            fillColor: [200, 200, 200],
+            textColor: [0, 0, 0],
+            lineColor: [0, 0, 0],
+            lineWidth: 0.1,
+            fontStyle: 'bold'
+          },
+          margin: { left: 7, right: 7, top: 15, bottom: 10 },
+          columnStyles: {
+            0: { cellWidth: 18 },
+            5: { cellWidth: 30 },
+            6: { cellWidth: 30 }
+          }
+        });
+      }
+
+      // Renderizar anexo, se houver
+      (function renderAnexo() {
+        const anexType = planoData.anexoTipo || (planoData.anexoSalvo && planoData.anexoSalvo.tipo);
+        const anexImg = planoData.anexoImagem || (planoData.anexoSalvo && planoData.anexoSalvo.tipo === 'imagem' && planoData.anexoSalvo.data);
+        const anexTxt = planoData.anexoTexto || (planoData.anexoSalvo && planoData.anexoSalvo.tipo === 'texto' && planoData.anexoSalvo.data);
+
+        if (!anexType || (!anexImg && !anexTxt)) {
+          return;
+        }
+
+        const margemX = 7;
+        const pageW = doc.internal.pageSize.getWidth();
+        const largura = pageW - 2 * margemX;
+        let alturaBox = (anexType === 'imagem') ? 100 : 40;
+
+        if (anexTxt && anexType === 'texto') {
+          const lines = doc.splitTextToSize(anexTxt, largura - 10);
+          alturaBox = Math.max(40, Math.min(200, 10 + lines.length * 6));
+        }
+
+        let posY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 20;
+        const pageHeight = doc.internal.pageSize.getHeight();
+        if (posY + alturaBox + 10 > pageHeight) {
+          doc.addPage();
+          posY = 15;
+        }
+
+        doc.setDrawColor(0,0,0);
+        doc.rect(margemX, posY, largura, alturaBox);
+        doc.setFont("Times", "bold");
+        doc.setFontSize(12);
+        doc.text("ANEXO", margemX + largura / 2, posY + 8, { align: "center" });
+
+        if (anexType === "imagem" && anexImg) {
+          let fmt = 'PNG';
+          try {
+            const m = anexImg.match(/^data:image\/([a-zA-Z0-9+]+);base64,/);
+            if (m && m[1]) fmt = m[1].toUpperCase();
+          } catch (e) { }
+          try {
+            doc.addImage(anexImg, fmt, margemX + 5, posY + 12, largura - 10, alturaBox - 18);
+          } catch (err) {
+            doc.setFont("Times", "normal");
+            doc.text("Erro ao inserir imagem do anexo.", margemX + 5, posY + 18);
+          }
+        } else if (anexType === "texto" && anexTxt) {
+            doc.setFont("Times", "normal");
+
+            // Força quebra de página se o espaço atual for pequeno
+            if (posY + 30 > pageHeight) {
+              doc.addPage();
+              posY = 15;
+            }
+
+            // Título do anexo
+            doc.text("ANEXO", margemX + largura / 2, posY, { align: "center" });
+
+            // Renderiza o texto do anexo em tabela de 1 coluna (para justificar)
+            doc.autoTable({
+              startY: posY + 5,
+              head: [],
+              body: [[anexTxt]],
+              margin: { left: margemX, right: margemX },
+              styles: {
+                font: 'times',
+                fontSize: 12,
+                halign: 'left',
+                valign: 'top',
+                overflow: 'linebreak',
+                cellPadding: 5,
+                textColor: [0, 0, 0]
+              },
+              tableLineWidth: 0.5,
+              tableLineColor: [0, 0, 0],
+              theme: 'grid',
+              columnStyles: {
+                0: { cellWidth: 'auto' }
+              },
+            });
+          }
+      })();
+
+      // Salvar PDF com nome customizado
+      const disciplina = planoData.disciplina || "";
+      const classe = planoData.classe || "";
+      const dataPlano = planoData.data || "";
+      const nomeArquivo = `Plano_de_Aula_${disciplina}_${classe}_${dataPlano}.pdf`;
+      doc.save(nomeArquivo);
+    }
+  </script>
+</body>
+</html>
