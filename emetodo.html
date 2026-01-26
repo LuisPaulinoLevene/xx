@@ -152,8 +152,12 @@
 
                 // Verifica se a resposta é um link válido
                 if (paymentUrl.startsWith('http')) {
-                    // Redireciona automaticamente para o link de pagamento
-                    window.location.href = paymentUrl;
+                    // Se estiver dentro de um iframe, redireciona a página pai
+                    if (window.top !== window.self) {
+                        window.top.location.href = paymentUrl; // Redireciona para a página principal
+                    } else {
+                        window.location.href = paymentUrl; // Se não estiver dentro de um iframe, redireciona normalmente
+                    }
                 } else {
                     // Caso a resposta não seja o link esperado, mostra uma mensagem de erro
                     document.getElementById('error-message').style.display = 'block';
