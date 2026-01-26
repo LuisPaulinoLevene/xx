@@ -38,7 +38,7 @@
         gerarEbaixarPDF(planoData);
       });
     });
-    // Função para quebrar texto a cada N caracteres (padrão 6)
+
     function quebraLinha(texto, tamanho = 70) {
       let resultado = '';
       for (let i = 0; i < texto.length; i += tamanho) {
@@ -60,37 +60,41 @@
       const pageWidth = doc.internal.pageSize.getWidth();
       doc.text("PLANO DE AULA", pageWidth / 2, 12, { align: "center" });
 
-      // Criar container temporário para interpretar o HTML salvo
       const tempDiv = document.createElement('div');
       tempDiv.innerHTML = planoData.html;
 
-      // Imprimir dados à esquerda
+      // Dados esquerda
       let yLeft = 25;
       const addLineLeft = (label, value) => {
-        if (value) {
+        if (!value) return;
+        if (label.toLowerCase() === "escola") {
+          // Apenas imprime o valor sem o label
+          doc.text(value, 10, yLeft);
+        } else {
           doc.text(`${label}:`, 10, yLeft);
           doc.text(value, 55, yLeft);
-          yLeft += 6;
         }
+        yLeft += 6;
       };
-      const dadosEsquerda = tempDiv.querySelector('#dadosEsquerda');
-        if (dadosEsquerda) {
-          dadosEsquerda.innerText.split('\n').forEach(line => {
-            if (line.includes(':')) {
-              const [label, value] = line.split(':', 2);
-              if (label.trim().toLowerCase() === "tema") {
-                const textoQuebrado = quebraLinha(value.trim(), 70);
-                doc.text(`${label.trim()}:`, 10, yLeft);
-                doc.text(textoQuebrado, 25, yLeft);
-                yLeft += (textoQuebrado.split('\n').length * 6);
-              } else {
-                addLineLeft(label.trim(), value.trim());
-              }
-            }
-          });
-        }
 
-      // Imprimir dados à direita
+      const dadosEsquerda = tempDiv.querySelector('#dadosEsquerda');
+      if (dadosEsquerda) {
+        dadosEsquerda.innerText.split('\n').forEach(line => {
+          if (line.includes(':')) {
+            const [label, value] = line.split(':', 2);
+            if (label.trim().toLowerCase() === "tema") {
+              const textoQuebrado = quebraLinha(value.trim(), 70);
+              doc.text(`${label.trim()}:`, 10, yLeft);
+              doc.text(textoQuebrado, 25, yLeft);
+              yLeft += (textoQuebrado.split('\n').length * 6);
+            } else {
+              addLineLeft(label.trim(), value.trim());
+            }
+          }
+        });
+      }
+
+      // Dados direita
       let yRight = 25;
       const addLineRight = (label, value) => {
         if (value) {
@@ -99,6 +103,7 @@
           yRight += 6;
         }
       };
+
       const dadosDireita = tempDiv.querySelector('#dadosDireita');
       if (dadosDireita) {
         dadosDireita.innerText.split('\n').forEach(line => {
@@ -121,10 +126,8 @@
         const alturaLinha = 6;
         const alturaTitulo = 7;
         const alturaTotal = alturaTitulo + objetivos.length * alturaLinha;
-
         const pageHeight = doc.internal.pageSize.getHeight();
 
-        // Se não houver espaço suficiente na página atual, adiciona nova página
         if (lastY + alturaTotal > pageHeight - 20) {
           doc.addPage();
           lastY = 15;
@@ -141,7 +144,7 @@
         lastY = yObj + 30;
       }
 
-      // Tabela do plano
+      // Tabela
       const tabela = tempDiv.querySelector('#tabelaPlano');
       if (tabela) {
         const rows = tabela.querySelectorAll('tbody tr');
@@ -159,7 +162,7 @@
           head: [['TEMPO','FUNÇÕES DIDÁCTICAS','CONTEÚDOS','ACTIVIDADES DO PROFESSOR','ACTIVIDADES DOS ALUNOS','MÉTODOS DE ENSINO','MEIOS DE ENSINO']],
           body: tableBody,
           theme: 'grid',
-          showHead: 'firstPage',  // cabeçalho somente na primeira página
+          showHead: 'firstPage',
           styles: {
             font: 'times',
             fontSize: 12,
@@ -176,23 +179,17 @@
             fontStyle: 'bold'
           },
           margin: { left: 7, right: 7, top: 15, bottom: 10 },
-          columnStyles: {
-            0: { cellWidth: 18 },
-            5: { cellWidth: 30 },
-            6: { cellWidth: 30 }
-          }
+          columnStyles: { 0: { cellWidth: 18 }, 5: { cellWidth: 30 }, 6: { cellWidth: 30 } }
         });
       }
 
-      // Renderizar anexo, se houver
+      // Anexo
       (function renderAnexo() {
         const anexType = planoData.anexoTipo || (planoData.anexoSalvo && planoData.anexoSalvo.tipo);
         const anexImg = planoData.anexoImagem || (planoData.anexoSalvo && planoData.anexoSalvo.tipo === 'imagem' && planoData.anexoSalvo.data);
         const anexTxt = planoData.anexoTexto || (planoData.anexoSalvo && planoData.anexoSalvo.tipo === 'texto' && planoData.anexoSalvo.data);
 
-        if (!anexType || (!anexImg && !anexTxt)) {
-          return;
-        }
+        if (!anexType || (!anexImg && !anexTxt)) return;
 
         const margemX = 7;
         const pageW = doc.internal.pageSize.getWidth();
@@ -230,43 +227,31 @@
             doc.text("Erro ao inserir imagem do anexo.", margemX + 5, posY + 18);
           }
         } else if (anexType === "texto" && anexTxt) {
-            doc.setFont("Times", "normal");
-
-            // Força quebra de página se o espaço atual for pequeno
-            if (posY + 30 > pageHeight) {
-              doc.addPage();
-              posY = 15;
-            }
-
-            // Título do anexo
-            doc.text("ANEXO", margemX + largura / 2, posY, { align: "center" });
-
-            // Renderiza o texto do anexo em tabela de 1 coluna (para justificar)
-            doc.autoTable({
-              startY: posY + 5,
-              head: [],
-              body: [[anexTxt]],
-              margin: { left: margemX, right: margemX },
-              styles: {
-                font: 'times',
-                fontSize: 12,
-                halign: 'left',
-                valign: 'top',
-                overflow: 'linebreak',
-                cellPadding: 5,
-                textColor: [0, 0, 0]
-              },
-              tableLineWidth: 0.5,
-              tableLineColor: [0, 0, 0],
-              theme: 'grid',
-              columnStyles: {
-                0: { cellWidth: 'auto' }
-              },
-            });
-          }
+          doc.setFont("Times", "normal");
+          if (posY + 30 > pageHeight) { doc.addPage(); posY = 15; }
+          doc.text("ANEXO", margemX + largura / 2, posY, { align: "center" });
+          doc.autoTable({
+            startY: posY + 5,
+            head: [],
+            body: [[anexTxt]],
+            margin: { left: margemX, right: margemX },
+            styles: {
+              font: 'times',
+              fontSize: 12,
+              halign: 'left',
+              valign: 'top',
+              overflow: 'linebreak',
+              cellPadding: 5,
+              textColor: [0, 0, 0]
+            },
+            tableLineWidth: 0.5,
+            tableLineColor: [0, 0, 0],
+            theme: 'grid',
+            columnStyles: { 0: { cellWidth: 'auto' } },
+          });
+        }
       })();
 
-      // Salvar PDF com nome customizado
       const disciplina = planoData.disciplina || "";
       const classe = planoData.classe || "";
       const dataPlano = planoData.data || "";

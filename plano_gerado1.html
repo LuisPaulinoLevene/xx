@@ -574,7 +574,8 @@ for (const fieldName of requiredFields) {
 
   // Cabeçalhos
   document.getElementById('dadosEsquerda').innerHTML = `
-    <p><strong></strong> ${escapeHtml(form.escola.value)}</p>
+    <p><strong>Escola:</strong> ${escapeHtml(form.escola.value)}</p>
+    <p><strong>Data:</strong> ${form.data.value}</p>
     <p><strong>Professor:</strong> ${escapeHtml(form.professor.value)}</p>
     <p><strong>Disciplina:</strong> ${escapeHtml(form.disciplina.value)}</p>
     <p><strong>Unidade Temática:</strong> ${escapeHtml(form.unidade.value)}</p>
@@ -587,7 +588,6 @@ for (const fieldName of requiredFields) {
     <p><strong>Lição nº:</strong> ${escapeHtml(form.licao.value || "—")}</p>
     <p><strong>Duração:</strong> ${escapeHtml(form.duracao.value)} minutos</p>
     <p><strong>Período:</strong> ${escapeHtml(form.periodo.value)}</p>
-    <p><strong>Data:</strong> ${form.data.value}</p>
     ${materiais.length ? `<p><strong>Materiais:</strong><br>${materiais.map(m => `• ${escapeHtml(m)}`).join('<br>')}</p>` : ''}`;
 
   // Objetivos
