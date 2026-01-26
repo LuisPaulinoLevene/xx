@@ -1,0 +1,14 @@
+
+  "articles": [
+    {
+      "title": "Definição de Plano de Aula",
+      "slug": "plano-de-aula",
+      "full_content": true,
+      "body": "O plano de aula é um documento que organiza de forma estruturada as atividades pedagógicas de uma aula ou conjunto de aulas. Ele permite que o professor tenha uma visão clara dos objetivos de aprendizagem, conteúdos, estratégias de ensino e métodos de avaliação. \n\n**Importância:**\n- Orienta o trabalho docente e facilita a organização do tempo.\n- Garante que todos os objetivos educacionais sejam contemplados.\n- Ajuda na adaptação da aula às necessidades dos alunos.\n\n**Impactos positivos no trabalho docente:**\n- Redução do improviso e maior eficácia no ensino.\n- Facilita o acompanhamento e avaliação do progresso dos alunos.\n- Proporciona aulas mais dinâmicas e envolventes.\n\n**Regras para estipulação de objetivos:**\n- Basear-se nos domínios de aprendizagem (cognitivo, afetivo, psicomotor).\n- Ser específico, mensurável, atingível, relevante e temporal.\n\n**Exemplo de plano de aula:**\n[Download em PDF](https://drive.google.com/file/d/1csZOyJltOvpmferKFiB2S81WkmBxMv0M/view?usp=drivesdk)"
+    },
+    {
+      "title": "Metodologia Colaborativa",
+      "slug": "metodologia-colaborativa",
+      "full_content": false,
+      "summary": "A metodologia colaborativa promove a construção colectiva do conhecimento entre alunos e professores. [Ler mais](conteudos/recursos/metodologia-colaborativa.html)"
+    }

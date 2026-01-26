@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Pagamento - GibraPay</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-image: linear-gradient(to right, #4facfe, #00f2fe);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      text-align: center;
+      color: white;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 50px auto;
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+
+    h3 {
+      color: red;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 5px;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .message {
+      color: red;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .success-message {
+      color: green;
+      font-size: 18px;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .processing-message {
+      font-size: 24px;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="processing-message" id="processing-message">
+    Processando...
+  </div>
+
+  <div class="container" id="payment-container">
+    <form id="payment-form">
+      <h3>ATENÇÃO! FIQUE NESTA PÁGINA DURANTE 1 MINUTO APÓS INSERIR O PIN.<br>Não recarregue ou saia. Se houver problema, ligue para 863614176 ou envie mensagem no WhatsApp.</h3>
+
+      <div class="form-group">
+        <input type="text" id="numero" name="numero" placeholder="Digite o número do Emola ou Mpesa" required>
+      </div>
+
+      <button type="submit">Confirmar Pagamento</button>
+
+      <p class="message" id="error-message" style="display: none;">Erro ao processar pagamento. Tente novamente.</p>
+      <p class="message" id="wait-message" style="display: none;">Aguarde pela solicitação do PIN no seu celular e insira-o para confirmar o pagamento.</p>
+      <p class="success-message" id="success-message" style="display: none;">Sucesso! Aguarde aqui ainda...</p>
+    </form>
+  </div>
+
+  <script type="module">
+    // Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+    import { getFirestore, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjR7ByKvIFDoF61CL5u2SmYjZ2SOqGd4I",
+      authDomain: "planoautomatico.firebaseapp.com",
+      projectId: "planoautomatico",
+      storageBucket: "planoautomatico.appspot.com",
+      messagingSenderId: "474178177133",
+      appId: "1:474178177133:web:452243accf7de0548b9764"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getFirestore(app);
+
+    // Mostrar usuário logado no console
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("Usuário logado:", user.uid);
+      } else {
+        console.log("Nenhum usuário logado");
+      }
+    });
+
+    // Mostrar formulário após carregamento
+    setTimeout(() => {
+      document.getElementById('processing-message').style.display = 'none';
+    }, 1000);
+
+    setTimeout(() => {
+      document.getElementById('payment-container').style.display = 'block';
+    }, 4000);
+
+    // Submissão do formulário
+    document.getElementById('payment-form').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const numero = document.getElementById('numero').value.trim();
+      const waitMsg = document.getElementById('wait-message');
+      waitMsg.style.display = 'block';
+
+      const dados = {
+        wallet_id: "966fa7ee-dc91-4e9e-af4c-9e74f4459017",
+        amount: 3.00,
+        number_phone: numero
+      };
+
+      try {
+        const response = await fetch("https://gibrapay.online/v1/transfer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "API-Key": "800fd4d1e3ce39695f5af45a577f6dca08155bf8b025c295c34d31ef691dba99863a76e433b6bbd7e13f981b0c8ee481ee8ccc14003202f9f4b925306c175b03"
+          },
+          body: JSON.stringify(dados)
+        });
+
+        const resultado = await response.json();
+
+        if (resultado.status === "success" && resultado.data) {
+          const user = auth.currentUser;
+
+          if (user) {
+            const userRef = doc(db, "users", user.uid);
+            const newDate = new Date();
+            newDate.setDate(newDate.getDate() + 30);
+
+            try {
+              await updateDoc(userRef, { date: formatDate(newDate) });
+              await createOrUpdatePlano(user.uid);
+
+              const txRef = doc(db, "users", user.uid, "transacoes", resultado.data.id || Date.now().toString());
+              await setDoc(txRef, resultado.data);
+            } catch (firestoreError) {
+              console.warn("Erro ao atualizar Firestore:", firestoreError.message);
+            }
+          }
+
+          waitMsg.style.display = 'none';
+          document.getElementById('success-message').style.display = 'block';
+
+          setTimeout(() => {
+            cleanPage();
+            window.location.href = "./homel.html";
+          }, 2000);
+        } else {
+          showError();
+        }
+      } catch (error) {
+        console.error("Erro geral:", error.message);
+        showError();
+      }
+    });
+
+    function showError() {
+      document.getElementById('wait-message').style.display = 'none';
+      document.getElementById('error-message').style.display = 'block';
+      setTimeout(() => {
+        document.getElementById('error-message').style.display = 'none';
+      }, 3000);
+    }
+
+    // Função para criar ou atualizar o campo 'plano' para 'mensal'
+    async function createOrUpdatePlano(userId) {
+      const userRef = doc(db, "users", userId);
+      const docSnap = await getDoc(userRef);
+      if (docSnap.exists()) {
+        const userData = docSnap.data();
+        await updateDoc(userRef, { plano: 'mensal' });
+      }
+    }
+
+    function formatDate(date) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
+    function cleanPage() {
+      document.getElementById('payment-form').reset();
+      document.querySelector('button').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
