@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Consultar Carteira</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 700px;
+            margin: auto;
+            background-image: linear-gradient(to right, #4facfe, #00f2fe);
+        }
+        .resultado {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            word-break: break-word;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #efefef;
+        }
+    </style>
+</head>
+<body>
+
+<h2 style="text-align: center;">Consultar Carteira</h2>
+
+<p><strong>ID da Carteira:</strong> <span id="idCarteiraDisplay">d504c389-f7d1-4d10-8030-778967ef1775</span></p>
+<p><strong>Email:</strong>cellshopakurula@gmail.com</p>
+
+<div class="resultado" id="resultado"></div>
+
+<script>
+    // ID fixo
+    const wallet_id = "d504c389-f7d1-4d10-8030-778967ef1775";
+
+    // Exibe o ID na página
+    document.getElementById('idCarteiraDisplay').innerText = wallet_id;
+
+    // Função para consultar a carteira
+    function consultarCarteira() {
+        const resultadoDiv = document.getElementById('resultado');
+
+        // Verifica se o ID da carteira foi atribuído corretamente
+        if (!wallet_id) {
+            resultadoDiv.innerText = 'ID da carteira não encontrado.';
+            return;
+        }
+
+        // URL da requisição com o ID fixo
+        const url = `https://gibrapay.online/v1/wallet/${encodeURIComponent(wallet_id)}`;
+
+        fetch(url, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === "error") {
+                resultadoDiv.innerText = `Erro: ${res.message}`;
+            } else {
+                const data = res.data;
+                const stats = data.statistics;
+
+                let html = `
+                    <h3>Carteira: ${data.nome}</h3>
+                    <p><strong>Saldo Atual:</strong> ${parseFloat(data.balance).toFixed(2)} MZN</p>
+                    <h4>Estatísticas</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Período</th>
+                                <th>Total</th>
+                                <th>Completas</th>
+                                <th>Falhas</th>
+                                <th>Saldo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                const periodos = {
+                    "daily": "Diário",
+                    "weekly": "Semanal",
+                    "monthly": "Mensal",
+                    "semi-annual": "Semestral",
+                    "annual": "Anual"
+                };
+
+                for (let periodo in stats) {
+                    html += `
+                        <tr>
+                            <td>${periodos[periodo] || periodo}</td>
+                            <td>${stats[periodo].total}</td>
+                            <td>${stats[periodo].complete}</td>
+                            <td>${stats[periodo].failed}</td>
+                            <td>${parseFloat(stats[periodo].balance).toFixed(2)} MZN</td>
+                        </tr>
+                    `;
+                }
+
+                html += `
+                        </tbody>
+                    </table>
+                `;
+
+                resultadoDiv.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            resultadoDiv.innerText = `Erro na requisição: ${error}`;
+        });
+    }
+
+    // Chama a função de consultar automaticamente ao carregar a página
+    window.onload = consultarCarteira;
+</script>
+
+</body>
+</html>

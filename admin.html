@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-image: linear-gradient(to right, #4facfe, #00f2fe);
+        }
+
+        .container {
+            width: 80%;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        td {
+            background-color: #f9f9f9;
+        }
+
+        .unauthorized {
+            color: red;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .insertDateField {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .insertDateField button {
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+            }
+
+            table {
+                font-size: 14px;
+            }
+        }
+
+        .admin-links {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .admin-links a {
+            margin: 0 15px;
+            color: black;
+            text-decoration: none;
+            font-size: 16px;
+        }
+
+        .copy-message {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .copyable {
+            color: #007bff;
+            cursor: pointer;
+            font-weight: bold;
+            text-decoration: underline;
+        }
+
+        .copyable:hover {
+            color: #0056b3;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="adminContent">
+            <!-- O conteúdo será carregado aqui -->
+        </div>
+    </div>
+
+    <div id="copyMessage" class="copy-message">
+        ID copiado!
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjR7ByKvIFDoF61CL5u2SmYjZ2SOqGd4I",
+            authDomain: "planoautomatico.firebaseapp.com",
+            projectId: "planoautomatico",
+            storageBucket: "planoautomatico.appspot.com",
+            messagingSenderId: "474178177133",
+            appId: "1:474178177133:web:452243accf7de0548b9764",
+            measurementId: "G-7GZFKCREKH"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore(app);
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                console.log("Usuário não logado. Redirecionando para index.html.");
+                window.location.href = "./index.html";
+            } else {
+                console.log("Usuário logado:", user.email);
+                checkIfAdmin(user);
+            }
+        });
+
+        async function checkIfAdmin(user) {
+            const userRef = doc(db, "users", user.uid);
+            const docSnap = await getDoc(userRef);
+
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+
+                if (userData.admin) {
+                    loadUsersData();
+                } else {
+                    showUnauthorizedMessage();
+                }
+            } else {
+                console.error("Erro: Usuário não encontrado no Firestore.");
+            }
+        }
+
+        async function loadUsersData() {
+            const usersRef = collection(db, "users");
+            const querySnapshot = await getDocs(usersRef);
+
+            let totalUsers = 0;
+            let totalInPrazo = 0;
+            let usersData = [];
+
+            querySnapshot.forEach((doc) => {
+                const userData = doc.data();
+                const userName = userData.name;
+                const userEmail = userData.email || "Não informado";
+                const expirationDate = userData.date || "Data não definida";
+
+                let expirationStatus = expirationDate;
+
+                function convertToDate(dateString) {
+                    const [day, month, year] = dateString.split('/');
+                    return new Date(`${month}/${day}/${year}`);
+                }
+
+                if (expirationDate !== "Data não definida" && expirationDate !== "") {
+                    const currentDate = new Date();
+                    const expiration = convertToDate(expirationDate);
+
+                    if (isNaN(expiration)) {
+                        expirationStatus = "INFINITO";
+                        totalInPrazo++;
+                    } else {
+                        if (expiration < currentDate) {
+                            expirationStatus = `Plano expirado em: ${expirationDate}`;
+                        } else {
+                            totalInPrazo++;
+                            expirationStatus = `Plano válido até: ${expirationDate}`;
+                        }
+                    }
+                } else {
+                    expirationStatus = "Data não definida";
+                }
+
+                usersData.push({ id: doc.id, name: userName, email: userEmail, expirationStatus });
+                totalUsers++;
+            });
+
+            usersData.sort((a, b) => a.name.localeCompare(b.name));
+
+            let tableContent = `
+                <table id="userTable">
+                    <thead>
+                        <tr>
+                            <th>ID do Documento</th>
+                            <th>Nome</th>
+                            <th>E-mail</th>
+                            <th>Data de Expiração</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            usersData.forEach(user => {
+                tableContent += `
+                    <tr>
+                        <td class="copyable" data-id="${user.id}">${user.id}</td>
+                        <td>${user.name}</td>
+                        <td>${user.email}</td>
+                        <td>${user.expirationStatus}</td>
+                    </tr>
+                `;
+            });
+
+            tableContent += `</tbody></table>`;
+
+            const totalContent = `
+                <p><strong>Total de usuários existentes: </strong><span id="totalUsers">${totalUsers}</span></p>
+                <p><strong>Total de usuários com datas em prazo: </strong><span id="totalInPrazo">${totalInPrazo}</span></p>
+            `;
+
+            const adminLinks = `
+                <div class="admin-links">
+                    <a href="admin2.html">Atendimentos diversos</a>
+                </div>
+            `;
+
+            const adminContentDiv = document.getElementById("adminContent");
+            adminContentDiv.innerHTML = totalContent + adminLinks + tableContent;
+
+            const copyableCells = document.querySelectorAll('.copyable');
+            copyableCells.forEach(cell => {
+                cell.addEventListener('click', () => {
+                    const id = cell.getAttribute('data-id');
+                    navigator.clipboard.writeText(id).then(() => {
+                        showCopyMessage();
+                    }).catch(err => {
+                        console.error('Erro ao copiar o ID: ', err);
+                    });
+                });
+            });
+        }
+
+        function showUnauthorizedMessage() {
+            const adminContentDiv = document.getElementById("adminContent");
+            adminContentDiv.innerHTML = "<h2 class='unauthorized'>Não autorizado! Você não é administrador. Obrigado</h2>";
+        }
+
+        function showCopyMessage() {
+            const copyMessageDiv = document.getElementById('copyMessage');
+            copyMessageDiv.style.display = 'block';
+            setTimeout(() => {
+                copyMessageDiv.style.display = 'none';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

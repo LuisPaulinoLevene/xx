@@ -1,0 +1,20 @@
+backend:
+  name: github
+  repo: benjanuario/gerador
+  branch: main
+
+media_folder: "uploads"
+public_folder: "/uploads"
+
+collections:
+  - name: "recursos"
+    label: "Recursos & Biblioteca"
+    folder: "conteudos/recursos"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Título", name: "title", widget: "string" }
+      - { label: "Data", name: "date", widget: "datetime" }
+      - { label: "Resumo", name: "summary", widget: "string" }
+      - { label: "Conteúdo Completo", name: "body", widget: "markdown" }
+      - { label: "Exibir completo?", name: "full_content", widget: "boolean", default: false }

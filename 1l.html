@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atualização Automática</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: linear-gradient(to right, #4facfe, #00f2fe);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            color: white;
+        }
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none; /* Inicialmente escondido */
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .message {
+            color: red;
+            font-size: 14px;
+            text-align: center;
+        }
+        .success-message {
+            color: green;
+            font-size: 18px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .processing-message {
+            font-size: 24px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mensagem de "Processando" visível inicialmente -->
+    <div class="processing-message" id="processing-message">
+        Processando...
+    </div>
+
+    <!-- Mensagem de sucesso -->
+    <div class="success-message" id="success-message" style="display: none;">
+        Dados atualizados com sucesso! Redirecionando...
+    </div>
+
+    <script type="module">
+        // Espera 3 segundos para esconder "Processando"
+        setTimeout(function() {
+            document.getElementById('processing-message').style.display = 'none';  // Esconde a mensagem "Processando"
+        }, 1000);
+
+        // Exibe a mensagem de sucesso após 1 segundo
+        setTimeout(function() {
+            document.getElementById('success-message').style.display = 'block';  // Exibe a mensagem de sucesso
+        }, 2000);
+
+        // Importando Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        // Configurações do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjR7ByKvIFDoF61CL5u2SmYjZ2SOqGd4I",
+            authDomain: "planoautomatico.firebaseapp.com",
+            projectId: "planoautomatico",
+            storageBucket: "planoautomatico.appspot.com",
+            messagingSenderId: "474178177133",
+            appId: "1:474178177133:web:452243accf7de0548b9764",
+            measurementId: "G-7GZFKCREKH"
+        };
+
+        // Inicializando o Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore(app);
+
+        // Função para atualizar os dados do usuário no Firestore
+        async function updateUserData() {
+            const user = auth.currentUser;
+            if (user) {
+                // Adiciona 30 dias à data atual
+                const currentDate = new Date();
+                currentDate.setDate(currentDate.getDate() + 30);  // Adiciona 30 dias
+                const updatedDate = formatDate(currentDate);  // Formata a data no formato dd/mm/yyyy
+
+                // Atualiza a data no Firestore
+                const userRef = doc(db, "users", user.uid);
+                await updateDoc(userRef, {
+                    date: updatedDate
+                });
+
+                // Atualiza o campo 'plano' para "mensall"
+                await updateDoc(userRef, {
+                    plano: 'mensal'
+                });
+
+                console.log("Data e plano atualizados.");
+            }
+        }
+
+        // Função para formatar a data no formato dd/mm/yyyy
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0'); // Mês é 0-indexed
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        // Executa a atualização assim que a página carregar
+        window.onload = function() {
+            setTimeout(() => {
+                updateUserData();
+                // Após 3 segundos redireciona para a página principal
+                setTimeout(() => {
+                    window.location.href = "https://luispaulinolevene.github.io/plano";  // Redireciona para a página "homel.html"
+                }, 3000);
+            }, 1000); // Aguarda 1 segundo antes de iniciar a atualização dos dados
+        };
+    </script>
+</body>
+</html>
