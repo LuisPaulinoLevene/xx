@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Pagamento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: linear-gradient(to right, #4facfe, #00f2fe);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            color: white;
+        }
+        .container {
+            max-width: 500px;
+            margin: 50px auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .message {
+            color: red;
+            font-size: 14px;
+            text-align: center;
+        }
+        .success-message {
+            color: green;
+            font-size: 18px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .processing-message {
+            font-size: 24px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="processing-message" id="processing-message">Processando...</div>
+
+    <div class="container" id="payment-container">
+        <form id="payment-form">
+            <h3 style="color:red;">
+                ATENÇÃO! FIQUE AQUI DURANTE 1 MINUTO SEM RECUAR OU SAIR DEPOIS DE INSERIR O PIN,
+                ATÉ SER REDIRECIONADO. Problemas? Ligue para 863614176 ou mande WhatsApp.
+            </h3>
+
+            <div class="form-group">
+                <input type="text" id="numero" name="numero" required>
+                <p id="metodo-msg" style="color: red; font-size: 14px; margin-top: 5px;"></p>
+            </div>
+
+            <button type="submit" id="confirm-button" disabled>Confirmar Pagamento</button>
+            <p class="message" id="error-message" style="display: none;">Erro ao processar pagamento. Tente novamente.</p>
+            <p class="message" id="wait-message" style="display: none;">Aguarde pela solicitação do PIN no seu celular e insira-o para confirmar.</p>
+            <p class="success-message" id="success-message" style="display: none;">Sucesso! Aguarde aqui ainda...</p>
+        </form>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, doc, updateDoc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjR7ByKvIFDoF61CL5u2SmYjZ2SOqGd4I",
+            authDomain: "planoautomatico.firebaseapp.com",
+            projectId: "planoautomatico",
+            storageBucket: "planoautomatico.appspot.com",
+            messagingSenderId: "474178177133",
+            appId: "1:474178177133:web:452243accf7de0548b9764"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore(app);
+
+        const inputNumero = document.getElementById('numero');
+        const metodoMsg = document.getElementById('metodo-msg');
+        const confirmButton = document.getElementById('confirm-button');
+
+        setTimeout(() => document.getElementById('processing-message').style.display = 'none', 1000);
+        setTimeout(() => document.getElementById('payment-container').style.display = 'block', 4000);
+
+        let emolaStatus = '';
+        let mpesaStatus = '';
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                console.log("Usuário logado:", user.uid);
+                await verificarMetodosPagamento();
+            } else {
+                console.log("Nenhum usuário logado");
+            }
+        });
+
+        async function verificarMetodosPagamento() {
+            const docRef = doc(db, "users", "gW1fMwZXuzgnk907ZlfVigYphDw1");
+            const snap = await getDoc(docRef);
+            if (snap.exists()) {
+                const { emola2, mpesa2 } = snap.data(); // ALTERAÇÃO AQUI
+                emolaStatus = emola2;
+                mpesaStatus = mpesa2;
+
+                if (emola2 === 'activo' && mpesa2 === 'desactivo') {
+                    inputNumero.placeholder = "Digite o número do Emola";
+                    metodoMsg.textContent = "Mpesa indisponível";
+                } else if (emola2 === 'desactivo' && mpesa2 === 'activo') {
+                    inputNumero.placeholder = "Digite o número do Mpesa";
+                    metodoMsg.textContent = "Emola indisponível";
+                } else if (emola2 === 'activo' && mpesa2 === 'activo') {
+                    inputNumero.placeholder = "Digite o número do Emola ou Mpesa";
+                    metodoMsg.textContent = "";
+                } else {
+                    inputNumero.placeholder = "Métodos de pagamento indisponíveis neste momento";
+                    metodoMsg.textContent = "";
+                }
+            } else {
+                inputNumero.placeholder = "Erro ao carregar métodos de pagamento";
+            }
+        }
+
+        inputNumero.addEventListener('input', () => {
+            const numero = inputNumero.value.trim();
+            if (numero.length >= 2) {
+                const segundoDigito = numero.charAt(1);
+                let isValid = true;
+
+                if (emolaStatus === 'desactivo' && mpesaStatus === 'desactivo') {
+                    if (['6', '7', '4', '5'].includes(segundoDigito)) {
+                        isValid = false;
+                    }
+                } else if (emolaStatus === 'desactivo') {
+                    if (['6', '7'].includes(segundoDigito)) {
+                        isValid = false;
+                    }
+                } else if (mpesaStatus === 'desactivo') {
+                    if (['4', '5'].includes(segundoDigito)) {
+                        isValid = false;
+                    }
+                }
+
+                if (isValid) {
+                    inputNumero.setCustomValidity('');
+                    confirmButton.disabled = false;
+                } else {
+                    inputNumero.setCustomValidity("Número inválido, por favor insira um número válido.");
+                    confirmButton.disabled = true;
+                    inputNumero.reportValidity();
+                }
+            } else {
+                inputNumero.setCustomValidity('');
+                confirmButton.disabled = true;
+            }
+        });
+
+        document.getElementById('payment-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const numero = inputNumero.value.trim();
+            const waitMsg = document.getElementById('wait-message');
+            const successMsg = document.getElementById('success-message');
+            const errorMsg = document.getElementById('error-message');
+
+            waitMsg.style.display = 'block';
+            errorMsg.style.display = 'none';
+
+            const dados = {
+                wallet_id: "d504c389-f7d1-4d10-8030-778967ef1775",
+                amount: 500.00,
+                number_phone: numero
+            };
+
+            try {
+                const response = await fetch("https://gibrapay.online/v1/transfer", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "API-Key": "196c3d2fef8194709bebd702ac90502f0b941bec8845640eb406c14e3a0f11b056ca9f7dbf50f6a703d54ebe31fd6020e55f4f18fff34339ffb0b30342aee069"
+                    },
+                    body: JSON.stringify(dados)
+                });
+
+                const resultado = await response.json();
+
+                if (resultado.status === "success" && resultado.data) {
+                    const user = auth.currentUser;
+                    if (user) {
+                        const userRef = doc(db, "users", user.uid);
+                        const newDate = new Date();
+                        newDate.setDate(newDate.getDate() + 366);
+
+                        try {
+                            await updateDoc(userRef, { date: formatDate(newDate) });
+                            await createOrUpdatePlano(user.uid);
+
+                            const txRef = doc(db, "users", user.uid, "transacoes", resultado.data.id || Date.now().toString());
+                            await setDoc(txRef, resultado.data);
+                        } catch (firestoreError) {
+                            console.warn("Erro ao escrever no Firestore, mas prosseguindo com o redirecionamento.");
+                        }
+                    }
+
+                    waitMsg.style.display = 'none';
+                    successMsg.style.display = 'block';
+
+                    setTimeout(() => {
+                        cleanPage();
+                        window.location.href = "./homel.html";
+                    }, 2000);
+                } else {
+                    showError();
+                }
+            } catch (err) {
+                console.error("Erro:", err);
+                showError();
+            }
+        });
+
+        function showError() {
+            document.getElementById('wait-message').style.display = 'none';
+            document.getElementById('error-message').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('error-message').style.display = 'none';
+            }, 3000);
+        }
+
+        async function createOrUpdatePlano(userId) {
+            const userRef = doc(db, "users", userId);
+            const docSnap = await getDoc(userRef);
+            if (docSnap.exists()) {
+                await updateDoc(userRef, { plano: 'anual' });
+            }
+        }
+
+        function formatDate(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function cleanPage() {
+            document.getElementById('payment-form').reset();
+            document.querySelector('button').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

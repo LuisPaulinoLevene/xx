@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pagamento</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-image: linear-gradient(to right, #4facfe, #00f2fe);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .container h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            background-color: #f9f9f9;
+            transition: border 0.3s ease;
+        }
+
+        select:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .message {
+            color: red;
+            font-size: 14px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .processing-message {
+            font-size: 24px;
+            color: white;
+            margin-top: 20px;
+        }
+
+        .message, .processing-message {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Container principal -->
+    <div class="container">
+
+        <!-- Mensagem de "Processando" -->
+        <div class="processing-message" id="processing-message">
+            Processando...
+        </div>
+        <div><label for="payment-value">Escolha o plano de pagamento</label></div>
+
+        <!-- Dropdown para escolher o valor -->
+        <div class="form-group">
+            <select id="payment-value">
+                <option value="50">Mensal</option>
+                <option value="500">Anual</option>
+                <option value="1">Infinito</option>
+            </select>
+        </div>
+
+        <!-- Botão de confirmação -->
+        <button id="submit-btn">OK</button>
+
+        <!-- Mensagem de erro -->
+        <p class="message" id="error-message">Erro ao processar pagamento. Tente novamente.</p>
+    </div>
+
+    <script type="module">
+        // Função para enviar os dados para a API
+        function sendPaymentRequest(valorSelecionado, returnUrl) {
+            const numero = '863614176';  // Número fixo do Emola
+            const data = {
+                "carteira": "1724330415881x796026612740522000",
+                "numero": numero,
+                "quem_comprou": "Luis", // Nome do comprador
+                "valor": valorSelecionado,
+                "return_url": returnUrl
+            };
+
+            // Exibe a mensagem de "processando"
+            document.getElementById('processing-message').style.display = 'block';
+
+            // Envia a requisição para a API de pagamento
+            fetch('https://mozpayment.co.mz/api/1.1/wf/pagamentorotativoemola', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.text()) // Recebe a resposta como texto
+            .then((text) => {
+                console.log('Resposta da API:', text);
+
+                // Limpa qualquer espaço extra (para garantir que seja um URL válido)
+                const paymentUrl = text.trim();
+
+                // Verifica se a resposta é um link válido
+                if (paymentUrl.startsWith('http')) {
+                    // Redireciona automaticamente para o link de pagamento
+                    window.location.href = paymentUrl;
+                } else {
+                    // Caso a resposta não seja o link esperado, mostra uma mensagem de erro
+                    document.getElementById('error-message').style.display = 'block';
+                    setTimeout(() => {
+                        document.getElementById('error-message').style.display = 'none';
+                        document.getElementById('processing-message').style.display = 'none';
+                    }, 2000);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                document.getElementById('error-message').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('error-message').style.display = 'none';
+                    document.getElementById('processing-message').style.display = 'none';
+                }, 2000);
+            });
+        }
+
+        // Função chamada quando o botão "OK" for clicado
+        document.getElementById('submit-btn').addEventListener('click', function () {
+            const valorSelecionado = document.getElementById('payment-value').value;
+
+            // Definir o return_url com base na escolha do valor
+            let returnUrl = '';
+            switch (valorSelecionado) {
+                case '50':
+                    returnUrl = 'https://luispaulinolevene.github.io/xx/1.html'; // URL para o valor 1
+                    break;
+                case '500':
+                    returnUrl = 'https://luispaulinolevene.github.io/xx/2.html'; // URL para o valor 2
+                    break;
+                case '1':
+                    returnUrl = 'https://luispaulinolevene.github.io/xx/3.html'; // URL para o valor 3
+                    break;
+            }
+
+            // Chama a função para enviar os dados para a API
+            sendPaymentRequest(valorSelecionado, returnUrl);
+        });
+    </script>
+
+</body>
+</html>
