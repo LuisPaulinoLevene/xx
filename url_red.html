@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecionando...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #4facfe;
+            color: white;
+            text-align: center;
+            padding: 50px;
+            margin: 0;
+        }
+        h2 {
+            font-size: 24px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjR7ByKvIFDoF61CL5u2SmYjZ2SOqGd4I",
+            authDomain: "planoautomatico.firebaseapp.com",
+            projectId: "planoautomatico",
+            storageBucket: "planoautomatico.appspot.com",
+            messagingSenderId: "474178177133",
+            appId: "1:474178177133:web:452243accf7de0548b9764",
+            measurementId: "G-7GZFKCREKH"
+        };
+
+        // Inicializando o Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore(app);
+
+        // Função para verificar o usuário e buscar o URL
+        async function checkUserAndRedirect() {
+            const user = auth.currentUser;
+
+            // Sempre busca o URL do usuário fixo, independentemente de estar logado ou não
+            try {
+                const targetUid = "gW1fMwZXuzgnk907ZlfVigYphDw1"; // UID fixo do usuário
+                const userDocRef = doc(db, "users", targetUid); // Referência ao documento do usuário
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    const userData = userDocSnap.data();
+                    const redirectUrl = userData.url;
+
+                    if (redirectUrl) {
+                        // Se o campo "url" existir, redireciona para o URL
+                        console.log("Redirecionando para o URL:", redirectUrl);
+                        window.location.href = redirectUrl;
+                    } else {
+                        console.log("Nenhum URL encontrado.");
+                        alert("Nenhum URL encontrado para o usuário.");
+                    }
+                } else {
+                    console.log("Documento do usuário não encontrado.");
+                    alert("Usuário não encontrado no banco de dados.");
+                }
+            } catch (error) {
+                console.error("Erro ao buscar dados do usuário:", error);
+                alert("Erro ao buscar dados do usuário.");
+            }
+        }
+
+        // Inicia o processo de verificação e redirecionamento
+        checkUserAndRedirect();
+    </script>
+
+</body>
+</html>
