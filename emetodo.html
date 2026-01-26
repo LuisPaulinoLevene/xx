@@ -91,6 +91,17 @@
         .message, .processing-message {
             display: none;
         }
+
+        /* Estilo para o botão de terminar sessão */
+        .logout-button {
+            background-color: #f44336;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+
+        .logout-button:hover {
+            background-color: #e53935;
+        }
     </style>
 </head>
 <body>
@@ -116,11 +127,33 @@
         <!-- Botão de confirmação -->
         <button id="submit-btn">OK</button>
 
+        <!-- Botão de terminar sessão -->
+        <button class="logout-button" id="logout-btn">Terminar Sessão</button>
+
         <!-- Mensagem de erro -->
         <p class="message" id="error-message">Erro ao processar pagamento. Tente novamente.</p>
     </div>
 
     <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjR7ByKvIFDoF61CL5u2SmYjZ2SOqGd4I",
+            authDomain: "planoautomatico.firebaseapp.com",
+            projectId: "planoautomatico",
+            storageBucket: "planoautomatico.appspot.com",
+            messagingSenderId: "474178177133",
+            appId: "1:474178177133:web:452243accf7de0548b9764",
+            measurementId: "G-7GZFKCREKH"
+        };
+
+        // Inicializando o Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth();
+        const db = getFirestore(app);
+
         // Função para enviar os dados para a API
         function sendPaymentRequest(valorSelecionado, returnUrl) {
             const numero = '863614176';  // Número fixo do Emola
@@ -204,6 +237,16 @@
 
             // Chama a função para enviar os dados para a API
             sendPaymentRequest(valorSelecionado, returnUrl);
+        });
+
+        // Função chamada para terminar a sessão do usuário
+        document.getElementById('logout-btn').addEventListener('click', function () {
+            signOut(auth).then(() => {
+                // Redireciona para index.html após o logout
+                window.location.href = './index.html';
+            }).catch((error) => {
+                console.error("Erro ao encerrar a sessão:", error);
+            });
         });
     </script>
 
