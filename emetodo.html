@@ -152,12 +152,19 @@
 
                 // Verifica se a resposta é um link válido
                 if (paymentUrl.startsWith('http')) {
-                    // Se estiver dentro de um iframe, redireciona a página pai
-                    if (window.top !== window.self) {
-                        window.top.location.href = paymentUrl; // Redireciona para a página principal
-                    } else {
-                        window.location.href = paymentUrl; // Se não estiver dentro de um iframe, redireciona normalmente
+                    // Função recursiva para "quebrar" todos os iframes
+                    function breakIframeAndRedirect() {
+                        if (window.top !== window.self) {
+                            // Se estiver dentro de um iframe, chama a função no nível mais alto
+                            window.top.location.href = paymentUrl;
+                        } else {
+                            // Se não estiver dentro de um iframe, redireciona normalmente
+                            window.location.href = paymentUrl;
+                        }
                     }
+
+                    // Chama a função para garantir o redirecionamento
+                    breakIframeAndRedirect();
                 } else {
                     // Caso a resposta não seja o link esperado, mostra uma mensagem de erro
                     document.getElementById('error-message').style.display = 'block';
@@ -190,7 +197,7 @@
                 case '500':
                     returnUrl = 'https://luispaulinolevene.github.io/xx/2.html'; // URL para o valor 2
                     break;
-                case '1':
+                case '2000':
                     returnUrl = 'https://luispaulinolevene.github.io/xx/3.html'; // URL para o valor 3
                     break;
             }
