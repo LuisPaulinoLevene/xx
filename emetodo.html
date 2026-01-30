@@ -118,7 +118,7 @@
         <!-- Dropdown para escolher o valor -->
         <div class="form-group">
             <select id="payment-value">
-                <option value="50">Mensal</option>
+                <option value="1">Mensal</option>
                 <option value="500">Anual</option>
                 <option value="2000">Infinito</option>
             </select>
@@ -224,7 +224,7 @@
             // Definir o return_url com base na escolha do valor
             let returnUrl = '';
             switch (valorSelecionado) {
-                case '50':
+                case '1':
                     returnUrl = 'https://luispaulinolevene.github.io/xx/1.html'; // URL para o valor 1
                     break;
                 case '500':
